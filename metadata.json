@@ -1,0 +1,8 @@
+{
+  "name": "Parlimen News Monitor",
+  "description": "Real-time news clipping and media monitoring dashboard for Parlimen Malaysia, tracking Dewan Rakyat, Dewan Negara, Hansard, and legislative updates across Malaysian news outlets.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
