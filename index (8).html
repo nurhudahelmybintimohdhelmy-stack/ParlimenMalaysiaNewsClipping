@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parlimen News Monitor</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b2430; --muted: #667085;
+    --line: #e3e7ee; --accent: #1f4e9c; --accent-soft: #e6eefb; --bar: #3b6fc4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161c; --card: #1a2029; --text: #e8ecf2; --muted: #98a2b3;
+      --line: #2a323e; --accent: #7fa8ee; --accent-soft: #223149; --bar: #5b8bdb;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 40px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 24px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 760px) { .panels { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .panel h2 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; cursor: pointer; }
+  .row .name { width: 150px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .track { flex: 1; background: var(--accent-soft); border-radius: 4px; height: 10px; }
+  .row .fill { background: var(--bar); height: 10px; border-radius: 4px; }
+  .row .n { width: 34px; text-align: right; color: var(--muted); }
+  .row.active .name { font-weight: 700; color: var(--accent); }
+  .days { display: flex; align-items: flex-end; gap: 4px; height: 110px; }
+  .day { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; font-size: 10px; color: var(--muted); }
+  .day i { display: block; width: 100%; background: var(--bar); border-radius: 3px 3px 0 0; min-height: 2px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; }
+  .filters input, .filters select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+         background: var(--card); color: var(--text); font: inherit; }
+  .filters input { flex: 1; min-width: 200px; }
+  .count { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+  .item a { color: var(--text); font-weight: 600; text-decoration: none; }
+  .item a:hover { color: var(--accent); text-decoration: underline; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--muted); align-items: center; }
+  .badge { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 1px 9px; font-weight: 600; }
+  .snip { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .empty { text-align: center; padding: 40px 12px; color: var(--muted); background: var(--card); border: 1px dashed var(--line); border-radius: 10px; }
+  .more { display: block; margin: 12px auto; padding: 8px 18px; border: 1px solid var(--line); background: var(--card);
+          color: var(--text); border-radius: 8px; cursor: pointer; font: inherit; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Parlimen News Monitor</h1>
+  <div class="sub" id="updated">Loading…</div>
+</header>
+<main>
+  <section class="stats" id="stats"></section>
+  <section class="panels">
+    <div class="panel"><h2>Articles by source (click to filter)</h2><div id="bySource"></div></div>
+    <div class="panel"><h2>Last 14 days</h2><div class="days" id="byDay"></div></div>
+  </section>
+
+  <section class="filters">
+    <input id="q" type="search" placeholder="Search headlines…">
+    <select id="type"><option value="">All types</option></select>
+    <select id="lang"><option value="">All languages</option></select>
+    <select id="range">
+      <option value="1">Today</option>
+      <option value="7" selected>Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="0">All time</option>
+    </select>
+  </section>
+  <div class="count" id="count"></div>
+  <div id="list"></div>
+  <button class="more" id="more" hidden>Show more</button>
+</main>
+<footer>Headlines link to the original publishers. Data refreshed automatically by GitHub Actions.</footer>
+
+<script>
+const PAGE = 40;
+const KL = "Asia/Kuala_Lumpur";
+let ALL = [], OUTLETS = [], shown = PAGE, sourceFilter = "";
+const $ = id => document.getElementById(id);
+const dayKey = d => new Date(d).toLocaleDateString("en-CA", { timeZone: KL });
+const fmt = d => new Date(d).toLocaleString("en-GB", { timeZone: KL, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function load() {
+  try {
+    const res = await fetch("data/articles.json", { cache: "no-store" });
+    const data = await res.json();
+    ALL = data.articles || [];
+    OUTLETS = data.outlets || [];
+    $("updated").textContent = data.updated
+      ? "Last updated " + fmt(data.updated) + " (Malaysia time) · " + ALL.length + " articles stored"
+      : "No data collected yet";
+  } catch (e) {
+    $("updated").textContent = "Could not load data";
+  }
+  const types = [...new Set(OUTLETS.map(o => o.type))];
+  const langs = [...new Set(OUTLETS.map(o => o.language))];
+  $("type").innerHTML += types.map(t => `<option>${esc(t)}</option>`).join("");
+  $("lang").innerHTML += langs.map(l => `<option>${esc(l)}</option>`).join("");
+  ["q", "type", "lang", "range"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; render(); }));
+  $("more").onclick = () => { shown += PAGE; renderList(filtered()); };
+  render();
+}
+
+function inRange(a, days) {
+  if (!days) return true;
+  if (days === 1) return dayKey(a.published) === dayKey(Date.now());
+  return Date.now() - new Date(a.published) <= days * 864e5;
+}
+
+function filtered(ignoreSource) {
+  const q = $("q").value.trim().toLowerCase();
+  const type = $("type").value, lang = $("lang").value, days = +$("range").value;
+  return ALL.filter(a =>
+    (!q || (a.title + " " + a.snippet).toLowerCase().includes(q)) &&
+    (!type || a.type === type) &&
+    (!lang || a.language === lang) &&
+    (ignoreSource || !sourceFilter || a.source_id === sourceFilter) &&
+    inRange(a, days));
+}
+
+function render() {
+  const base = filtered(true);
+  renderStats(base);
+  renderSources(base);
+  renderDays();
+  renderList(filtered());
+}
+
+function renderStats(base) {
+  const today = ALL.filter(a => dayKey(a.published) === dayKey(Date.now())).length;
+  const week = ALL.filter(a => Date.now() - new Date(a.published) <= 7 * 864e5).length;
+  const active = new Set(ALL.map(a => a.source_id)).size;
+  $("stats").innerHTML = [
+    [today, "Today"], [week, "Last 7 days"], [ALL.length, "Total stored"], [active + " / " + OUTLETS.length, "Sources with articles"]
+  ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join("");
+}
+
+function renderSources(base) {
+  const counts = {};
+  base.forEach(a => counts[a.source_id] = (counts[a.source_id] || 0) + 1);
+  const rows = OUTLETS.map(o => ({ ...o, n: counts[o.id] || 0 })).sort((a, b) => b.n - a.n);
+  const max = Math.max(1, ...rows.map(r => r.n));
+  $("bySource").innerHTML = rows.map(r =>
+    `<div class="row ${r.id === sourceFilter ? "active" : ""}" data-id="${r.id}">
+       <span class="name">${esc(r.name)}</span>
+       <span class="track"><span class="fill" style="display:block;width:${r.n / max * 100}%"></span></span>
+       <span class="n">${r.n}</span></div>`).join("") || '<div class="sub">No sources</div>';
+  document.querySelectorAll("#bySource .row").forEach(el => el.onclick = () => {
+    sourceFilter = sourceFilter === el.dataset.id ? "" : el.dataset.id;
+    shown = PAGE; render();
+  });
+}
+
+function renderDays() {
+  const days = [];
+  for (let i = 13; i >= 0; i--) days.push(dayKey(Date.now() - i * 864e5));
+  const counts = Object.fromEntries(days.map(d => [d, 0]));
+  ALL.forEach(a => { const k = dayKey(a.published); if (k in counts) counts[k]++; });
+  const max = Math.max(1, ...Object.values(counts));
+  $("byDay").innerHTML = days.map(d =>
+    `<div class="day" title="${d}: ${counts[d]}"><span>${counts[d] || ""}</span><i style="height:${counts[d] / max * 80}%"></i><span>${d.slice(8)}</span></div>`).join("");
+}
+
+function renderList(items) {
+  $("count").textContent = items.length + " article" + (items.length === 1 ? "" : "s") + (sourceFilter ? " · filtered by source" : "");
+  if (!items.length) {
+    $("list").innerHTML = `<div class="empty">${ALL.length ? "No articles match these filters." : "No articles yet. Run the “Collect parliament news” workflow in the Actions tab to fetch the first batch."}</div>`;
+    $("more").hidden = true; return;
+  }
+  $("list").innerHTML = items.slice(0, shown).map(a =>
+    `<article class="item">
+       <a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a>
+       <div class="meta"><span class="badge">${esc(a.source)}</span><span>${fmt(a.published)}</span><span>${esc(a.type)}</span><span>${esc(a.language)}</span></div>
+       ${a.snippet ? `<p class="snip">${esc(a.snippet)}</p>` : ""}
+     </article>`).join("");
+  $("more").hidden = items.length <= shown;
+}
+
+load();
+</script>
+</body>
+</html>

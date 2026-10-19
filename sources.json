@@ -1,0 +1,129 @@
+{
+  "keywords": [
+    "parlimen",
+    "parliament",
+    "dewan rakyat",
+    "dewan negara",
+    "ahli parlimen",
+    "hansard",
+    "lower house",
+    "upper house",
+    "persidangan dewan"
+  ],
+  "google_news_query": "(parlimen OR parliament OR \"dewan rakyat\" OR \"dewan negara\")",
+  "google_news_window": "14d",
+  "outlets": [
+    {
+      "id": "parlimen",
+      "name": "Parlimen Malaysia",
+      "type": "Official",
+      "language": "BM/EN",
+      "domain": "parlimen.gov.my",
+      "feeds": []
+    },
+    {
+      "id": "rtm",
+      "name": "RTM",
+      "type": "Official",
+      "language": "BM/EN",
+      "domain": "berita.rtm.gov.my",
+      "feeds": []
+    },
+    {
+      "id": "bernama",
+      "name": "Bernama",
+      "type": "News agency / TV",
+      "language": "BM/EN",
+      "domain": "bernama.com",
+      "feeds": []
+    },
+    {
+      "id": "astroawani",
+      "name": "Astro Awani",
+      "type": "News agency / TV",
+      "language": "BM/EN",
+      "domain": "astroawani.com",
+      "feeds": []
+    },
+    {
+      "id": "thestar",
+      "name": "The Star",
+      "type": "Newspaper (English)",
+      "language": "EN",
+      "domain": "thestar.com.my",
+      "feeds": ["https://www.thestar.com.my/rss/News/Nation"]
+    },
+    {
+      "id": "nst",
+      "name": "New Straits Times",
+      "type": "Newspaper (English)",
+      "language": "EN",
+      "domain": "nst.com.my",
+      "feeds": []
+    },
+    {
+      "id": "malaymail",
+      "name": "Malay Mail",
+      "type": "Newspaper (English)",
+      "language": "EN",
+      "domain": "malaymail.com",
+      "feeds": ["https://www.malaymail.com/feed/rss/malaysia"]
+    },
+    {
+      "id": "fmt",
+      "name": "Free Malaysia Today",
+      "type": "Newspaper (English)",
+      "language": "EN",
+      "domain": "freemalaysiatoday.com",
+      "feeds": ["https://www.freemalaysiatoday.com/category/nation/feed/"]
+    },
+    {
+      "id": "malaysiakini",
+      "name": "Malaysiakini",
+      "type": "Newspaper (English)",
+      "language": "EN/BM",
+      "domain": "malaysiakini.com",
+      "feeds": []
+    },
+    {
+      "id": "theedge",
+      "name": "The Edge Malaysia",
+      "type": "Newspaper (English)",
+      "language": "EN",
+      "domain": "theedgemalaysia.com",
+      "feeds": []
+    },
+    {
+      "id": "bharian",
+      "name": "Berita Harian",
+      "type": "Newspaper (Malay)",
+      "language": "BM",
+      "domain": "bharian.com.my",
+      "feeds": []
+    },
+    {
+      "id": "utusan",
+      "name": "Utusan Malaysia",
+      "type": "Newspaper (Malay)",
+      "language": "BM",
+      "domain": "utusan.com.my",
+      "feeds": ["https://www.utusan.com.my/feed/"]
+    },
+    {
+      "id": "sinar",
+      "name": "Sinar Harian",
+      "type": "Newspaper (Malay)",
+      "language": "BM",
+      "domain": "sinarharian.com.my",
+      "feeds": []
+    },
+    {
+      "id": "hmetro",
+      "name": "Harian Metro",
+      "type": "Newspaper (Malay)",
+      "language": "BM",
+      "domain": "hmetro.com.my",
+      "feeds": []
+    }
+  ]
+}
