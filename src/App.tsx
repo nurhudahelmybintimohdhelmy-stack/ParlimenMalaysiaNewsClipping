@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Article, FilterState, SourcesConfig } from './types';
-import { DEFAULT_CONFIG, INITIAL_ARTICLES } from './data/defaultData';
+import { DEFAULT_CONFIG } from './data/defaultData';
 import {
   formatDateDayKey,
-  fetchLiveParliamentArticles,
-  mergeArticles,
+  fetchStoredArticles,
+  triggerCollection,
   exportArticlesToCSV,
   exportArticlesToJSON,
 } from './services/newsService';
@@ -17,29 +17,24 @@ import { ArticleCard } from './components/ArticleCard';
 import { SourcesModal } from './components/SourcesModal';
 
 const PAGE_SIZE = 40;
-const STORAGE_ARTICLES_KEY = 'parlimen_news_articles_v1';
-const STORAGE_UPDATED_KEY = 'parlimen_news_updated_v1';
+const STORAGE_BOOKMARKS_KEY = 'parlimen_news_bookmarks_v2';
 const STORAGE_THEME_KEY = 'parlimen_news_theme';
 
 export function App() {
   const [config] = useState<SourcesConfig>(DEFAULT_CONFIG);
-  const [articles, setArticles] = useState<Article[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_ARTICLES_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to parse stored articles:', e);
-    }
-    return INITIAL_ARTICLES;
-  });
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  const [lastUpdated, setLastUpdated] = useState<string | null>(() => {
-    return localStorage.getItem(STORAGE_UPDATED_KEY) || new Date().toISOString();
+  // Bookmarks are personal, so they stay in this browser
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_BOOKMARKS_KEY);
+      if (saved) return new Set(JSON.parse(saved));
+    } catch (e) {
+      console.error('Failed to parse stored bookmarks:', e);
+    }
+    return new Set();
   });
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -75,17 +70,25 @@ export function App() {
     }
   }, [darkMode]);
 
-  // Save articles whenever updated
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_ARTICLES_KEY, JSON.stringify(articles));
-      if (lastUpdated) {
-        localStorage.setItem(STORAGE_UPDATED_KEY, lastUpdated);
-      }
-    } catch (e) {
-      console.warn('Storage quota notice:', e);
-    }
-  }, [articles, lastUpdated]);
+    localStorage.setItem(STORAGE_BOOKMARKS_KEY, JSON.stringify(Array.from(bookmarkedIds)));
+  }, [bookmarkedIds]);
+
+  const loadArticles = async () => {
+    const data = await fetchStoredArticles();
+    setArticles(data.articles);
+    setLastUpdated(data.lastUpdated);
+    return data;
+  };
+
+  useEffect(() => {
+    loadArticles()
+      .catch((err) => {
+        console.error(err);
+        showToast('Could not load clippings right now.');
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -95,13 +98,12 @@ export function App() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const { newArticles } = await fetchLiveParliamentArticles(config);
-      if (newArticles.length > 0) {
-        const merged = mergeArticles(articles, newArticles);
-        setArticles(merged);
-        const updatedTime = new Date().toISOString();
-        setLastUpdated(updatedTime);
-        showToast(`Refreshed! Found ${newArticles.length} recent parliamentary update(s).`);
+      const result = await triggerCollection();
+      await loadArticles();
+      if (result.skipped) {
+        showToast('Feeds were checked moments ago. Showing the latest clippings.');
+      } else if (result.inserted > 0) {
+        showToast(`Refreshed! Added ${result.inserted} new parliamentary clipping(s).`);
       } else {
         showToast('All feeds up to date. No new articles found.');
       }
@@ -114,9 +116,12 @@ export function App() {
   };
 
   const handleToggleBookmark = (id: string) => {
-    setArticles((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, bookmarked: !a.bookmarked } : a))
-    );
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleUpdateFilter = (updates: Partial<FilterState>) => {
@@ -148,11 +153,16 @@ export function App() {
     return Date.now() - t <= days * 864e5;
   };
 
+  const articlesWithBookmarks = useMemo(
+    () => articles.map((a) => (bookmarkedIds.has(a.id) ? { ...a, bookmarked: true } : a)),
+    [articles, bookmarkedIds]
+  );
+
   // Base filtered for stats and source counts (ignoring source filter so breakdown shows full context)
   const baseFiltered = useMemo(() => {
     const q = filter.searchQuery.trim().toLowerCase();
     const tag = filter.selectedTag.trim().toLowerCase();
-    return articles.filter((a) => {
+    return articlesWithBookmarks.filter((a) => {
       const matchesSearch =
         !q || (a.title + ' ' + (a.snippet || '')).toLowerCase().includes(q);
       const matchesTag =
@@ -174,7 +184,7 @@ export function App() {
         matchesBookmark
       );
     });
-  }, [articles, filter.searchQuery, filter.selectedTag, filter.selectedType, filter.selectedLanguage, filter.rangeDays, selectedDayFilter, filter.onlyBookmarked]);
+  }, [articlesWithBookmarks, filter.searchQuery, filter.selectedTag, filter.selectedType, filter.selectedLanguage, filter.rangeDays, selectedDayFilter, filter.onlyBookmarked]);
 
   // Final filtered list including source filter
   const filteredArticles = useMemo(() => {
@@ -187,7 +197,7 @@ export function App() {
   const todayCount = articles.filter((a) => formatDateDayKey(a.published) === todayKey).length;
   const weekCount = articles.filter((a) => Date.now() - new Date(a.published).getTime() <= 7 * 864e5).length;
   const activeSourcesCount = new Set(articles.map((a) => a.source_id)).size;
-  const bookmarkedCount = articles.filter((a) => a.bookmarked).length;
+  const bookmarkedCount = articlesWithBookmarks.filter((a) => a.bookmarked).length;
 
   // Source counts map for breakdown
   const sourceCountsMap = useMemo(() => {
@@ -325,9 +335,11 @@ export function App() {
           {filteredArticles.length === 0 && (
             <div className="text-center py-16 px-4 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl my-4">
               <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                {articles.length
+                {isLoading
+                  ? 'Loading clippings…'
+                  : articles.length
                   ? 'No articles match these filters.'
-                  : 'No articles yet. Run the “Collect parliament news” workflow or click Fetch Updates to retrieve the first batch.'}
+                  : 'No articles yet. New clippings are collected automatically every 30 minutes, or click Fetch Updates to retrieve the first batch now.'}
               </p>
               <button
                 onClick={handleResetFilters}
@@ -351,7 +363,7 @@ export function App() {
       </main>
 
       <footer className="text-slate-500 dark:text-slate-500 text-xs text-center py-6 px-4 border-t border-slate-200 dark:border-slate-800">
-        Headlines link to the original publishers. Data refreshed automatically by GitHub Actions and live RSS feeds.
+        Headlines link to the original publishers. Parliament-related clippings are collected automatically every 30 minutes from Google News and outlet RSS feeds.
       </footer>
 
       {/* Sources & Keywords Modal */}

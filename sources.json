@@ -51,7 +51,7 @@
       "type": "Newspaper (English)",
       "language": "EN",
       "domain": "thestar.com.my",
-      "feeds": ["https://www.thestar.com.my/rss/News/Nation"]
+      "feeds": []
     },
     {
       "id": "nst",
