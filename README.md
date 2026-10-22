@@ -14,7 +14,7 @@ A modern, responsive React web application monitoring news headlines and media c
   - 1-click citation and URL copy for briefings and reports.
   - Bookmarking/starring to save clippings for parliamentary research.
   - Export clippings to CSV or JSON.
-  - Live RSS feed fetcher with deduplication matching `collect.py` logic.
+  - Automatic collection every 30 minutes: a scheduled Netlify Function searches Google News (English and Malay) and outlet RSS feeds, keeps only headlines mentioning parliament keywords, and stores them in Netlify Database. **Fetch Updates** triggers a collection on demand.
 - **Theme Support**: Seamless Light and Dark mode with persistent user preference.
 
 ## Tech Stack
@@ -23,3 +23,4 @@ A modern, responsive React web application monitoring news headlines and media c
 - **Bundler & Dev Server**: Vite 6 (running on port 3000)
 - **Styling**: Tailwind CSS v4
 - **Icons**: Lucide React
+- **Backend**: Netlify Functions (`/api/articles` + scheduled collector) with Netlify Database (Postgres via Drizzle ORM)
